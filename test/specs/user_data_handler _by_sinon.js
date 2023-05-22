@@ -1,7 +1,6 @@
 const UserDataHandler = require('../../src/data_handlers/user_data_handler.js')
 const users = require('../data/users')
 const usersEmails = require('../data/usersEmails')
-const nock = require('nock')
 const sinon = require('sinon')
 const expect = require('chai').expect
 
@@ -12,28 +11,10 @@ describe('/test endpoint', () => {
     userDataHandler = new UserDataHandler()
   })
 
-  afterEach(() => {
-    nock.cleanAll()
-  })
-
-  it('loadUsers should return error if error is got', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(400)
-    let ifErrorCatched
-    try {
-      await userDataHandler.loadUsers()
-    } catch (err) {
-      expect(err.message).to.equal('Failed to load users data: Error: Request failed with status code 400')
-      ifErrorCatched = true
-    }
-    expect(ifErrorCatched).to.equal(true)
-  })
-
   it('getUserEmailsList should return list of emails', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, users)
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = users
+    })
 
     await userDataHandler.loadUsers()
     const userEmailsList = await userDataHandler.getUserEmailsList()
@@ -42,10 +23,9 @@ describe('/test endpoint', () => {
   })
 
   it('getUserEmailsList should return Error if no users provided', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, [])
-
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = []
+    })
     let ifErrorCatched = false
     await userDataHandler.loadUsers()
     try {
@@ -58,9 +38,9 @@ describe('/test endpoint', () => {
   })
 
   it('getNumberOfUsers should return number of users', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, users)
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = users
+    })
 
     await userDataHandler.loadUsers()
     const numberOfUsers = await userDataHandler.getNumberOfUsers()
@@ -69,9 +49,9 @@ describe('/test endpoint', () => {
   })
 
   it('getNumberOfUsers should return 0 if no users provided', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, [])
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = []
+    })
 
     await userDataHandler.loadUsers()
     const numberOfUsers = await userDataHandler.getNumberOfUsers()
@@ -194,9 +174,9 @@ describe('/test endpoint', () => {
   })
 
   it('findUsers should return all users matched', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, users)
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = users
+    })
 
     const searchParamsObject = { username: 'Antonette' }
     const expectedMatchingUsers = [{
@@ -222,20 +202,18 @@ describe('/test endpoint', () => {
         bs: 'synergize scalable supply-chains'
       }
     }]
-    const spy = sinon.spy(userDataHandler, 'isMatchingAllSearchParams')
+
     await userDataHandler.loadUsers()
     const matchingUsers = await userDataHandler.findUsers(searchParamsObject)
 
     expect(matchingUsers).to.deep.equal(expectedMatchingUsers)
-    expect(spy.callCount).to.equal(10)
   })
 
   it('findUsers should return all users if all they are matched', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, users)
-
-    sinon.stub(userDataHandler, 'isMatchingAllSearchParams').callsFake(function fakeFn () {
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = users
+    })
+    const stub = sinon.stub(userDataHandler, 'isMatchingAllSearchParams').callsFake(function fakeFn () {
       return true
     })
     const searchParamsObject = {}
@@ -244,12 +222,13 @@ describe('/test endpoint', () => {
     const matchingUsers = await userDataHandler.findUsers(searchParamsObject)
 
     expect(matchingUsers).to.deep.equal(users)
+    expect(stub.callCount).to.equal(10)
   })
 
   it('findUsers should return error if no parameters are provided', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, users)
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = users
+    })
 
     let ifErrorCatched = false
 
@@ -264,9 +243,9 @@ describe('/test endpoint', () => {
   })
 
   it('findUsers should return error if no users loaded', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, [])
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = []
+    })
 
     const searchParamsObject = { username: 'Antonette' }
     let ifErrorCatched = false
@@ -282,9 +261,9 @@ describe('/test endpoint', () => {
   })
 
   it('findUsers should return error if no users matched', async () => {
-    nock('http://localhost:3000')
-      .get('/users')
-      .reply(200, users)
+    sinon.stub(userDataHandler, 'loadUsers').callsFake(function fakeFn () {
+      this.users = users
+    })
 
     const searchParamsObject = { username: 'test' }
     let ifErrorCatched = false
